@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>全部备忘 - 即刻备忘</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #ffffff;
+            color: #202124;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 0 20px;
+        }
+        .container { max-width: 600px; width: 100%; }
+
+        /* ----- 登录/注册页 ----- */
+        #page-auth {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #page-auth h2 {
+            font-size: 24px;
+            font-weight: 400;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+        #page-auth .subtitle {
+            font-size: 14px;
+            color: #9aa0a6;
+            margin-bottom: 32px;
+        }
+        .auth-form {
+            width: 100%;
+            max-width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .auth-form input {
+            width: 100%;
+            padding: 14px 18px;
+            font-size: 16px;
+            border: 1px solid #dfe1e5;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .auth-form input:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+        }
+        .auth-form .btn-submit {
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: 500;
+            color: #fff;
+            background: #1a73e8;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .auth-form .btn-submit:hover { background: #1557b0; }
+        .auth-form .btn-submit:disabled { background: #a8c7fa; cursor: not-allowed; }
+        .auth-switch {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #5f6368;
+        }
+        .auth-switch a {
+            color: #1a73e8;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .auth-switch a:hover { text-decoration: underline; }
+        .auth-error {
+            font-size: 13px;
+            color: #d93025;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        /* ----- 列表页 ----- */
+        #page-list { display: none; }
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 0 20px;
+            border-bottom: 1px solid #e8eaed;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .list-header h2 { font-size: 22px; font-weight: 400; color: #202124; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .user-email { font-size: 12px; color: #5f6368; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .list-header .count { font-size: 14px; color: #5f6368; background: #f1f3f4; padding: 4px 12px; border-radius: 16px; }
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #1a73e8;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .back-btn:hover { background: #e8f0fe; }
+        .logout-btn {
+            background: none;
+            border: 1px solid #dadce0;
+            font-size: 13px;
+            color: #5f6368;
+            cursor: pointer;
+            padding: 4px 14px;
+            border-radius: 16px;
+            transition: background 0.2s;
+        }
+        .logout-btn:hover { background: #f1f3f4; }
+
+        .memo-list { list-style: none; }
+        .memo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f3f4;
+            animation: fadeIn 0.2s ease;
+        }
+        .memo-item:last-child { border-bottom: none; }
+        .memo-content {
+            font-size: 16px;
+            color: #202124;
+            word-break: break-word;
+            padding-right: 16px;
+            line-height: 1.5;
+        }
+        .memo-time {
+            font-size: 12px;
+            color: #9aa0a6;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .memo-user {
+            font-size: 11px;
+            color: #9aa0a6;
+            white-space: nowrap;
+        }
+        .empty-state {
+            text-align: center;
+            color: #9aa0a6;
+            padding: 60px 0;
+            font-size: 15px;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 480px) {
+            .memo-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .memo-time { align-self: flex-start; }
+            .list-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ========== 登录/注册页 ========== -->
+    <div id="page-auth">
+        <h2>🔐 管理员登录</h2>
+        <p class="subtitle" id="authSubtitle">登录以查看全部备忘</p>
+        <div class="auth-form">
+            <input type="email" id="authEmail" placeholder="邮箱地址" autofocus>
+            <input type="password" id="authPassword" placeholder="密码">
+            <button class="btn-submit" id="authSubmitBtn">登 录</button>
+        </div>
+        <p class="auth-error" id="authError"></p>
+        <p class="auth-switch">
+            <span id="switchLabel">没有账号？</span>
+            <a id="switchAuthBtn">注册新账号</a>
+        </p>
+    </div>
+
+    <!-- ========== 列表页 ========== -->
+    <div id="page-list">
+        <div class="list-header">
+            <div class="header-left">
+                <a href="index.html" class="back-btn">← 返回录入</a>
+            </div>
+            <h2>所有备忘</h2>
+            <div class="header-right">
+                <span class="user-email" id="userEmail"></span>
+                <span class="count" id="totalCount">0</span>
+                <button class="logout-btn" id="logoutBtn">退出</button>
+            </div>
+        </div>
+        <ul class="memo-list" id="memoListContainer">
+            <li class="empty-state">加载中...</li>
+        </ul>
+    </div>
+
+</div>
+
+<script>
+    (function() {
+        const SUPABASE_URL = 'https://jocnignjppntkcndyvfi.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_k1WOgx7zI-nG_cHgXGPA-A_Obi-Ws6A';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // DOM
+        const pageAuth = document.getElementById('page-auth');
+        const pageList = document.getElementById('page-list');
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authSubmitBtn = document.getElementById('authSubmitBtn');
+        const authError = document.getElementById('authError');
+        const authSubtitle = document.getElementById('authSubtitle');
+        const switchLabel = document.getElementById('switchLabel');
+        const switchAuthBtn = document.getElementById('switchAuthBtn');
+        const userEmail = document.getElementById('userEmail');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const memoListContainer = document.getElementById('memoListContainer');
+        const totalCount = document.getElementById('totalCount');
+
+        let authMode = 'login'; // 'login' | 'signup'
+
+        // ---------- Toast ----------
+        function showToast(text) {
+            var el = document.getElementById('toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'toast';
+                el.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);'
+                    + 'background:#333;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;'
+                    + 'opacity:0;transition:opacity 0.3s;z-index:999;pointer-events:none;';
+                document.body.appendChild(el);
+            }
+            el.textContent = text;
+            el.style.opacity = '1';
+            clearTimeout(el._timer);
+            el._timer = setTimeout(function() { el.style.opacity = '0'; }, 1600);
+        }
+
+        // ---------- 页面切换 ----------
+        function showPage(page) {
+            if (page === 'auth') {
+                pageAuth.style.display = 'flex';
+                pageList.style.display = 'none';
+            } else {
+                pageAuth.style.display = 'none';
+                pageList.style.display = 'block';
+            }
+        }
+
+        // ---------- 更新 UI 模式 (登录 vs 注册) ----------
+        function updateAuthUI() {
+            if (authMode === 'login') {
+                authSubmitBtn.textContent = '登 录';
+                authSubtitle.textContent = '登录以查看全部备忘';
+                switchLabel.textContent = '没有账号？';
+                switchAuthBtn.textContent = '注册新账号';
+            } else {
+                authSubmitBtn.textContent = '注 册';
+                authSubtitle.textContent = '创建管理员账号';
+                switchLabel.textContent = '已有账号？';
+                switchAuthBtn.textContent = '返回登录';
+            }
+            authError.textContent = '';
+        }
+
+        // ---------- 认证 ----------
+        async function handleAuth() {
+            var email = authEmail.value.trim();
+            var password = authPassword.value;
+
+            if (!email || !password) {
+                authError.textContent = '请输入邮箱和密码';
+                return;
+            }
+            if (password.length < 6) {
+                authError.textContent = '密码长度至少 6 位';
+                return;
+            }
+
+            authSubmitBtn.disabled = true;
+            authSubmitBtn.textContent = authMode === 'login' ? '登录中...' : '注册中...';
+            authError.textContent = '';
+
+            try {
+                var result;
+                if (authMode === 'login') {
+                    result = await supabase.auth.signInWithPassword({ email: email, password: password });
+                } else {
+                    result = await supabase.auth.signUp({ email: email, password: password });
+                }
+
+                if (result.error) {
+                    // 翻译常见错误
+                    var msg = result.error.message;
+                    if (msg.includes('Invalid login credentials')) {
+                        msg = '邮箱或密码错误';
+                    } else if (msg.includes('already registered')) {
+                        msg = '该邮箱已注册，请直接登录';
+                    } else if (msg.includes('Email not confirmed')) {
+                        msg = '邮箱未确认，请先点击邮件中的确认链接';
+                    }
+                    authError.textContent = msg;
+                    authSubmitBtn.disabled = false;
+                    updateAuthUI();
+                    return;
+                }
+
+                // 注册成功：Supabase 默认会发送确认邮件
+                if (authMode === 'signup' && result.data.user) {
+                    // 检查是否需要邮箱确认
+                    if (result.data.session) {
+                        // 邮箱确认被禁用，直接登录
+                        showToast('注册成功');
+                        onAuthenticated(result.data.user);
+                    } else {
+                        showToast('注册成功，请查收确认邮件');
+                        authMode = 'login';
+                        updateAuthUI();
+                        authSubmitBtn.disabled = false;
+                    }
+                    return;
+                }
+
+                if (result.data.user) {
+                    onAuthenticated(result.data.user);
+                }
+            } catch (err) {
+                authError.textContent = '网络错误，请稍后重试';
+                authSubmitBtn.disabled = false;
+                updateAuthUI();
+            }
+        }
+
+        function onAuthenticated(user) {
+            userEmail.textContent = user.email || user.id;
+            showPage('list');
+            renderList();
+        }
+
+        async function tryRestoreSession() {
+            var { data: { session } } = await supabase.auth.getSession();
+            if (session && session.user) {
+                onAuthenticated(session.user);
+                return true;
+            }
+            return false;
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            showPage('auth');
+            authEmail.value = '';
+            authPassword.value = '';
+            authMode = 'login';
+            updateAuthUI();
+            authEmail.focus();
+        }
+
+        // ---------- 获取全部备忘 (RLS 层控制可见范围) ----------
+        async function fetchMemos() {
+            var { data, error } = await supabase
+                .from('memos')
+                .select('id, content, created_at, user_id')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('查询失败:', error);
+                return [];
+            }
+            return data || [];
+        }
+
+        // ---------- 渲染 ----------
+        function renderEmpty(message) {
+            memoListContainer.innerHTML = '';
+            var li = document.createElement('li');
+            li.className = 'empty-state';
+            li.textContent = message;
+            memoListContainer.appendChild(li);
+        }
+
+        async function renderList() {
+            renderEmpty('加载中...');
+
+            var memos = await fetchMemos();
+            totalCount.textContent = memos.length;
+
+            if (memos.length === 0) {
+                renderEmpty('还没有备忘');
+                return;
+            }
+
+            var fragment = document.createDocumentFragment();
+            memos.forEach(function(item) {
+                var li = document.createElement('li');
+                li.className = 'memo-item';
+
+                var contentSpan = document.createElement('span');
+                contentSpan.className = 'memo-content';
+                contentSpan.textContent = item.content;
+
+                var metaSpan = document.createElement('span');
+                metaSpan.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;';
+
+                var timeSpan = document.createElement('span');
+                timeSpan.className = 'memo-time';
+                var date = new Date(item.created_at);
+                var pad = function(n) { return String(n).padStart(2, '0'); };
+                timeSpan.textContent =
+                    date.getFullYear() + '-' +
+                    pad(date.getMonth() + 1) + '-' +
+                    pad(date.getDate()) + ' ' +
+                    pad(date.getHours()) + ':' +
+                    pad(date.getMinutes());
+
+                metaSpan.appendChild(timeSpan);
+
+                li.appendChild(contentSpan);
+                li.appendChild(metaSpan);
+                fragment.appendChild(li);
+            });
+
+            memoListContainer.innerHTML = '';
+            memoListContainer.appendChild(fragment);
+        }
+
+        // ---------- 事件绑定 ----------
+        authSubmitBtn.addEventListener('click', handleAuth);
+        authPassword.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); handleAuth(); }
+        });
+        switchAuthBtn.addEventListener('click', function() {
+            authMode = authMode === 'login' ? 'signup' : 'login';
+            updateAuthUI();
+            authEmail.focus();
+        });
+        logoutBtn.addEventListener('click', logout);
+
+        // ---------- 启动 ----------
+        async function initApp() {
+            var restored = await tryRestoreSession();
+            if (!restored) {
+                showPage('auth');
+                updateAuthUI();
+            }
+        }
+
+        initApp();
+    })();
+</script>
+</body>
+</html>

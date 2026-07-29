@@ -142,6 +142,19 @@
             white-space: nowrap;
             font-variant-numeric: tabular-nums;
         }
+        .memo-delete {
+            background: none;
+            border: none;
+            color: #9aa0a6;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+            flex-shrink: 0;
+        }
+        .memo-delete:hover { color: #d93025; background: #fce8e6; }
         .memo-user {
             font-size: 11px;
             color: #9aa0a6;
@@ -359,6 +372,23 @@
             authEmail.focus();
         }
 
+        // ---------- 删除备忘 ----------
+        async function deleteMemo(id) {
+            var { error } = await supabase
+                .from('memos')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('删除失败:', error);
+                showToast('删除失败，请稍后重试');
+                return false;
+            }
+            showToast('已删除');
+            await renderList();
+            return true;
+        }
+
         // ---------- 获取全部备忘 (RLS 层控制可见范围) ----------
         async function fetchMemos() {
             var { data, error } = await supabase
@@ -418,8 +448,19 @@
 
                 metaSpan.appendChild(timeSpan);
 
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'memo-delete';
+                deleteBtn.textContent = '✕';
+                deleteBtn.title = '删除';
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm('确定删除这条备忘？')) {
+                        deleteMemo(item.id);
+                    }
+                });
+
                 li.appendChild(contentSpan);
                 li.appendChild(metaSpan);
+                li.appendChild(deleteBtn);
                 fragment.appendChild(li);
             });
 

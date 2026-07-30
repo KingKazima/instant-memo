@@ -121,9 +121,10 @@
 
         .memo-list { list-style: none; }
         .memo-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 12px;
+            align-items: flex-start;
             padding: 14px 0;
             border-bottom: 1px solid #f1f3f4;
             animation: fadeIn 0.2s ease;
@@ -169,8 +170,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 480px) {
-            .memo-item { flex-direction: column; align-items: flex-start; gap: 4px; }
-            .memo-time { align-self: flex-start; }
+            .memo-item { grid-template-columns: 1fr auto auto; gap: 8px; }
             .list-header { flex-direction: column; align-items: flex-start; }
         }
     </style>
@@ -432,9 +432,6 @@
                 contentSpan.className = 'memo-content';
                 contentSpan.textContent = item.content;
 
-                var metaSpan = document.createElement('span');
-                metaSpan.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;';
-
                 var timeSpan = document.createElement('span');
                 timeSpan.className = 'memo-time';
                 var date = new Date(item.created_at);
@@ -445,8 +442,6 @@
                     pad(date.getDate()) + ' ' +
                     pad(date.getHours()) + ':' +
                     pad(date.getMinutes());
-
-                metaSpan.appendChild(timeSpan);
 
                 var deleteBtn = document.createElement('button');
                 deleteBtn.className = 'memo-delete';
@@ -459,7 +454,7 @@
                 });
 
                 li.appendChild(contentSpan);
-                li.appendChild(metaSpan);
+                li.appendChild(timeSpan);
                 li.appendChild(deleteBtn);
                 fragment.appendChild(li);
             });
